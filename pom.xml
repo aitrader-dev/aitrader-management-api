@@ -10,10 +10,10 @@
     </parent>
 
     <groupId>com.aitrader.domain</groupId>
-    <artifactId>aitrader-events-api</artifactId>
+    <artifactId>aitrader-management-api</artifactId>
     <version>${revision}</version>
-    <name>aitrader-events-api</name>
-    <description>events-api</description>
+    <name>aitrader-management-api</name>
+    <description>management-api</description>
     
     <properties>
         <java.version>25</java.version>
