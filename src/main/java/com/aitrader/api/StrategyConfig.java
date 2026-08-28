@@ -12,6 +12,7 @@ public record StrategyConfig(
         Double orderSize,
         Integer limitDistance,
         Integer stopDistance,
+        Double chanceRiskRatio,
         Integer maxOpenOrders,
         Long executionTimeout,
         List<TimeFrame> activeTimeFrames,
