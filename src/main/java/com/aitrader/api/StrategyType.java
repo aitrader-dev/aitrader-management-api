@@ -1,5 +1,5 @@
 package com.aitrader.api;
 
 public enum StrategyType {
-    ADX, EMA, DEBUG_LOGGING, BB_TREND, BB_PULLBACK, REMOTE;
+    ADX, EMA, DEBUG_LOGGING, BB_TREND, BB_PULLBACK, REMOTE, TREND_PULLBACK_HUNTER;
 }
