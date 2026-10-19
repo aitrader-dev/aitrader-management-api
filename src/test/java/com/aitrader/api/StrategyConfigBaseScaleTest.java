@@ -52,10 +52,34 @@ class StrategyConfigBaseScaleTest {
     @Test
     void legacyConstructorDefaultsBaseToNull() {
         StrategyConfig legacy = new StrategyConfig(
-                "s-1", StrategyType.BB_TREND, "v1", true, "MKT-1",
+                "s-1", StrategyType.BB_TREND, 1, true, "MKT-1",
                 1.0, 0, 0, 1.5, 1, 30000L, List.of(), Map.of());
         assertNull(legacy.baseScaleMinutes());
         assertEquals(1, legacy.effectiveBaseScaleMinutes());
+    }
+
+    @Test
+    void integerVersionIsNumeric() {
+        StrategyConfig config = new StrategyConfig(
+                "s-1", StrategyType.BB_TREND, 10, true, "MKT-1",
+                1.0, 0, 0, 1.5, 1, 30000L, List.of(), Map.of(), 5);
+        assertEquals(10, config.strategyVersion());
+        assertTrue(config.strategyVersion() > 9);
+    }
+
+    @Test
+    void legacyStringVersionParsesLeadingInteger() {
+        StrategyConfig parsed = new StrategyConfig(
+                "s-1", StrategyType.BB_TREND, "1.0", true, "MKT-1",
+                1.0, 0, 0, 1.5, 1, 30000L, List.of(), Map.of());
+        assertEquals(1, parsed.strategyVersion());
+    }
+
+    @Test
+    void legacyNonNumericVersionRejected() {
+        assertThrows(IllegalArgumentException.class, () -> new StrategyConfig(
+                "s-1", StrategyType.BB_TREND, "v1", true, "MKT-1",
+                1.0, 0, 0, 1.5, 1, 30000L, List.of(), Map.of()));
     }
 
     @Test
@@ -70,7 +94,7 @@ class StrategyConfigBaseScaleTest {
 
     private static StrategyConfig configWithBase(Integer base) {
         return new StrategyConfig(
-                "s-1", StrategyType.BB_TREND, "v1", true, "MKT-1",
+                "s-1", StrategyType.BB_TREND, 1, true, "MKT-1",
                 1.0, 0, 0, 1.5, 1, 30000L, List.of(), Map.of(), base);
     }
 }
