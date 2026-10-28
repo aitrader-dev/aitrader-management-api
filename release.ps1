@@ -1,6 +1,53 @@
 #!/usr/bin/env pwsh
 $ErrorActionPreference = "Stop"
 
+function Show-Usage {
+    param([string]$Out = "stdout")
+    $lines = @(
+        "Usage: $PSCommandPath [-m <message> | --message <message> | --message=<message>]",
+        "",
+        "  -m, --message <message>  Use this message as the tag/release note (non-interactive).",
+        "  -h, --help               Show this help and exit.",
+        "",
+        "With no -m/--message, the message is read interactively:",
+        "type the message and press Enter twice when done (interactive mode)."
+    )
+    if ($Out -eq "stderr") {
+        foreach ($l in $lines) { [Console]::Error.WriteLine($l) }
+    } else {
+        foreach ($l in $lines) { Write-Output $l }
+    }
+}
+
+$MessageText = ""
+$HaveMessage = $false
+
+$i = 0
+while ($i -lt $args.Count) {
+    $a = $args[$i]
+    if ($a -eq "-m" -or $a -eq "--message") {
+        if ($i + 1 -ge $args.Count) {
+            [Console]::Error.WriteLine("Error: option '$a' requires an argument")
+            Show-Usage -Out "stderr"
+            exit 2
+        }
+        $MessageText = $args[$i + 1]
+        $HaveMessage = $true
+        $i += 2
+    } elseif ($a -like "--message=*") {
+        $MessageText = $a.Substring("--message=".Length)
+        $HaveMessage = $true
+        $i += 1
+    } elseif ($a -eq "-h" -or $a -eq "--help") {
+        Show-Usage
+        exit 0
+    } else {
+        [Console]::Error.WriteLine("Error: unknown argument: $a")
+        Show-Usage -Out "stderr"
+        exit 2
+    }
+}
+
 $LatestTag = git tag --list 'v*' --sort=-v:refname | Select-Object -First 1
 
 if ([string]::IsNullOrWhiteSpace($LatestTag)) {
@@ -15,18 +62,21 @@ if ([string]::IsNullOrWhiteSpace($LatestTag)) {
 }
 
 Write-Host "Next tag: $NewTag"
-Write-Host "Enter tag message (press Enter twice when done):"
 
-$Message = @()
-while ($true) {
-    $Line = Read-Host
-    if ([string]::IsNullOrWhiteSpace($Line) -and $Message.Count -gt 0) {
-        break
+if (-not $HaveMessage) {
+    Write-Host "Enter tag message (press Enter twice when done):"
+
+    $Message = @()
+    while ($true) {
+        $Line = Read-Host
+        if ([string]::IsNullOrWhiteSpace($Line) -and $Message.Count -gt 0) {
+            break
+        }
+        $Message += $Line
     }
-    $Message += $Line
-}
 
-$MessageText = $Message -join "`n"
+    $MessageText = $Message -join "`n"
+}
 
 if ([string]::IsNullOrWhiteSpace($MessageText)) {
     Write-Error "Tag message cannot be empty"
