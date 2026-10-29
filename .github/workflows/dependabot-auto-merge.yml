@@ -20,10 +20,46 @@ jobs:
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
-      - name: Auto-merge patch and minor updates
+      - name: Check out base branch
         if: |
           steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
           steps.metadata.outputs.update-type == 'version-update:semver-minor'
-        run: gh pr merge --auto --squash "${{ github.event.pull_request.html_url }}"
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          fetch-depth: 0
+
+      # Plain git squash-merge + push: needs no "Allow auto-merge" repo
+      # setting, so it works on the GitHub Free plan.
+      - name: Squash-merge with git
+        if: |
+          steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+          steps.metadata.outputs.update-type == 'version-update:semver-minor'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+          git config user.name "dependabot[bot]"
+          git config user.email "49699333+dependabot[bot]@users.noreply.github.com"
+          git fetch origin "pull/${PR_NUMBER}/head:pr-${PR_NUMBER}"
+          for attempt in 1 2 3; do
+            git fetch origin "${BASE_REF}"
+            git checkout -B "tmp-merge-${PR_NUMBER}" "origin/${BASE_REF}"
+            git merge --squash --ff "pr-${PR_NUMBER}"
+            if git diff --cached --quiet; then
+              echo "No changes staged; nothing to do."
+              exit 0
+            fi
+            git commit -m "${PR_TITLE} (#${PR_NUMBER})"
+            if git push origin "HEAD:${BASE_REF}"; then
+              git push origin --delete "${HEAD_REF}" || true
+              exit 0
+            fi
+            echo "Push rejected (attempt ${attempt}/3); base moved, retrying."
+            sleep 10
+          done
+          echo "Push failed after 3 attempts; needs manual merge."
+          exit 1
